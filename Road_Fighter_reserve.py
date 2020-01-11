@@ -4,27 +4,32 @@ import random
 import os
 import time
 import neat
+import pickle
 
 pygame.font.init()
 
 # constant variables
 WIN_WIDTH = 600
-WIN_HEIGTH = 800
-WINDOW = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGTH))
-pygame.display.set_caption("Drunk Driver")
-PLAYER_SOBER_IMG = pygame.transform.scale(pygame.image.load(os.path.join("imgs", "player.png")), (100,100))
-BG_IMG = pygame.image.load(os.path.join("imgs", "Road_Background.jpg"))
-OBSTACLE_IMG = pygame.transform.scale(pygame.image.load(os.path.join("imgs", "car.png")), (100,100))
+WIN_HEIGHT = 800
+IMG_WIDTH = 50
+IMG_HEIGHT = 100
+ROAD_LEFTWALL = 140
+ROAD_RIGHTWALL = 420
+WINDOW = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
+pygame.display.set_caption("Road Fighter")
+PLAYER_IMG = pygame.transform.scale(pygame.image.load(os.path.join("imgs", "player.png")), (IMG_WIDTH,IMG_HEIGHT))
+BG_IMG = pygame.transform.scale(pygame.image.load(os.path.join("imgs", "Road_Background.jpg")), (600,800))
+OBSTACLE_IMG = pygame.transform.scale(pygame.image.load(os.path.join("imgs", "car.png")), (IMG_WIDTH,IMG_HEIGHT))
 STAT_FONT = pygame.font.SysFont("comicsans", 50)
 GENERATION = 0
 
 class Player:
-    IMG = PLAYER_SOBER_IMG
+    IMG = PLAYER_IMG
     VELOCITY = 5
 
     #initialize player's position to center
     def __init__(self):
-        self.x = 200
+        self.x = 300
         self.y = 600
 
     def moveLeft(self):
@@ -51,49 +56,55 @@ class Player:
 
     # check left side of the player
     def checkLeft(self, obstacle):
-        if obstacle.x >= self.x - 100 and obstacle.x <= self.x:
+        if obstacle.x >= self.x - self.IMG.get_width() and obstacle.x <= self.x:
             return 1
-        if self.x - 100 <= 0:
+        if obstacle.x + obstacle.IMG.get_width() >= self.x - self.IMG.get_width() and obstacle.x + obstacle.IMG.get_width() <= self.x:
+            return 1
+        if self.x - self.IMG.get_width() <= ROAD_LEFTWALL:
             return 1
         return 0
 
     # check right side of the player
     def checkRight(self, obstacle):
-        if obstacle.x >= self.x + 100 and obstacle.x <= self.x + 200:
+        if obstacle.x >= self.x + self.IMG.get_width() and obstacle.x <= self.x + self.IMG.get_width() * 2:
             return 1
-        if self.x + 100 >= WIN_WIDTH:
+        if obstacle.x + obstacle.IMG.get_width() >= self.x + self.IMG.get_width() and obstacle.x + obstacle.IMG.get_width() <= self.x + self.IMG.get_width() * 2:
+            return 1
+        if self.x + self.IMG.get_width() >= ROAD_RIGHTWALL:
             return 1
         return 0
 
     # check above of the player
     def checkMiddle(self, obstacle):
-        if obstacle.x > self.x  and obstacle.x < self.x + 100:
+        if obstacle.x > self.x  and obstacle.x < self.x + self.IMG.get_width():
+            return 1
+        if obstacle.x + obstacle.IMG.get_width() > self.x  and obstacle.x + obstacle.IMG.get_width() < self.x + self.IMG.get_width():
             return 1
         return 0
 
     # check far left side of the player
     def checkFarLeft(self, obstacle):
-        if obstacle.x > self.x - 200 and obstacle.x < self.x - 100:
+        if obstacle.x > self.x - 2 * self.IMG.get_width() and obstacle.x < self.x - self.IMG.get_width():
             return 1
-        if self.x - 200 <= 0:
+        if self.x - 2 * self.IMG.get_width() <= ROAD_LEFTWALL:
             return 1
         return 0
 
     # check far right side of the player
     def checkFarRight(self, obstacle):
-        if obstacle.x > self.x + 200 and obstacle.x < self.x + 300:
+        if obstacle.x > self.x + 2 * self.IMG.get_width() and obstacle.x < self.x + 3 * self.IMG.get_width():
             return 1
-        if self.x + 200 <= WIN_WIDTH:
+        if self.x + 2 * self.IMG.get_width() >= ROAD_RIGHTWALL:
             return 1
         return 0
 
 class Obstacle:
     IMG = OBSTACLE_IMG
-    VEL = 20
+    VEL = 15
 
     # initialize position to the top of the window
     def __init__(self):
-        self.x = 0
+        self.x = 140
         self.y = -100
         self.passed = False
         self.set_position()
@@ -101,7 +112,7 @@ class Obstacle:
     # randomly assign obstacle's position
     def set_position(self):
         self.y -= random.randrange(0, 1000)
-        self.x += random.randrange(0, 500)
+        self.x += random.randrange(0, 380 - self.IMG.get_width())
 
     # move the obstacle down
     def move(self):
@@ -119,8 +130,30 @@ class Obstacle:
             return True
         return False
 
-def draw_window(window, players, obstacle, score, generation):
-    window.blit(BG_IMG, (0, 0))
+class Road:
+    IMG = BG_IMG
+    VEL = 5
+
+    def __init__(self):
+        self.x = 0
+        self.y1 = 0
+        self.y2 = -1 * self.IMG.get_height()
+
+    def move(self):
+        self.y1 += self.VEL
+        self.y2 += self.VEL
+        if self.y1 >= WIN_HEIGHT:
+            self.y1 = -1 * self.IMG.get_height()
+        if self.y2 >= WIN_HEIGHT:
+            self.y2 = -1 * self.IMG.get_height()
+
+    def draw(self, win):
+        win.blit(self.IMG, (self.x, self.y1))
+        win.blit(self.IMG, (self.x, self.y2))
+
+
+def draw_window(window, players, obstacle, score, generation, road):
+    road.draw(window)
     if generation == 0:
         generation = 1
     for player in players:
@@ -129,11 +162,11 @@ def draw_window(window, players, obstacle, score, generation):
 
     # display score
     score_label = STAT_FONT.render("Score: " + str(score), 1, (255, 255, 255))
-    window.blit(score_label, (WIN_WIDTH - 150, 10))
+    window.blit(score_label, (WIN_WIDTH - 160, 10))
 
     # display generation
     score_label = STAT_FONT.render("Gens: " + str(generation - 1), 1, (255, 255, 255))
-    window.blit(score_label, (WIN_WIDTH - 180, 40))
+    window.blit(score_label, (WIN_WIDTH - 160, 40))
 
     pygame.display.update()
 
@@ -141,6 +174,7 @@ def main(genomes, config):
     nets = []
     ge = []
     players = []
+    road = Road()
     global GENERATION
     GENERATION += 1
 
@@ -154,25 +188,23 @@ def main(genomes, config):
 
     obstacles = [Obstacle()]
     score = 0
+
+    clock = pygame.time.Clock()
+
     run = True
     while run:
+        clock.tick(60)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
                 pygame.quit()
                 quit()
 
-        # in case there are more than one line of obstacles
-        obstacle_index = 0
-        if len(players) > 0:
-            if len(obstacles) > 1 and players[0].y < obstacles[0].y + obstacles[0].IMG.get_height():
-                obstacle_index = 1
-        else:
-            run = False
-            break
-
         add_obstacle = False
         removed_obstacle = []
+
+        road.move()
 
         # move obstacle and check for collision
         for obstacle in obstacles:
@@ -191,7 +223,7 @@ def main(genomes, config):
                     add_obstacle = True
 
             # if obstacle passes the screen
-            if obstacle.y + obstacle.IMG.get_height() > WIN_HEIGTH:
+            if obstacle.y + obstacle.IMG.get_height() > WIN_HEIGHT:
                 removed_obstacle.append(obstacle)
 
             obstacle.move()
@@ -211,7 +243,8 @@ def main(genomes, config):
         # call NEAT to find the best way to survive
         for x, player in enumerate(players):
             ge[x].fitness += 0.01
-            around_environment = player.checkAround(obstacle) # get data about area around player
+            for obstacle in obstacles:
+                around_environment = player.checkAround(obstacle) # get data about area around player
             output = nets[x].activate((
                                         player.x,
                                         around_environment[0],
@@ -225,16 +258,29 @@ def main(genomes, config):
             if output[2] > 0.5:
                 player.moveRight()
 
-            # remove a player if they are out of the map
-            if player.x <= 5 or player.x + player.IMG.get_width() >= 495:
+            # discourage NEAT to have player stay at the side of the screen
+            if player.x <= 145 or player.x + player.IMG.get_width() >= WIN_WIDTH - 85:
                 ge[x].fitness -= 1
-            if player.x <= 0 or player.x + player.IMG.get_width() >= WIN_WIDTH:
+
+            if player.x >= 250 and player.x <= 300:
+                ge[x].fitness += 0.2
+
+            # remove a player if they are out of the map
+            if player.x <= 140 or player.x + player.IMG.get_width() >= WIN_WIDTH - 80:
                 ge[x].fitness -= 3
                 nets.pop(players.index(player))
                 ge.pop(players.index(player))
                 players.pop(players.index(player))
 
-        draw_window(WINDOW, players, obstacle, score, GENERATION)
+        draw_window(WINDOW, players, obstacle, score, GENERATION, road)
+
+        # stop if score is large enough
+        if score > 100:
+            with open("best.pickle", "wb") as f:
+                pickle.dump(nets[0], f)
+            run = False
+            raise SystemExit()
+            break
 
 def run(config_path):
     config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
@@ -247,8 +293,6 @@ def run(config_path):
     population.add_reporter(stats)
 
     winner = population.run(main, 100)
-
-
 
 if __name__ == '__main__':
     local_dir = os.path.dirname(__file__)
