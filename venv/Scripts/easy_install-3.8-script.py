@@ -1,4 +1,4 @@
-#!"C:\Ken\AI Project\DrunkDriver\venv\Scripts\python.exe"
+#!"C:\Ken\AI Project\RoadFighter\venv\Scripts\python.exe"
 # EASY-INSTALL-ENTRY-SCRIPT: 'setuptools==40.8.0','console_scripts','easy_install-3.8'
 __requires__ = 'setuptools==40.8.0'
 import re

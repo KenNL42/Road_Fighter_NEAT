@@ -2,7 +2,6 @@
 import pygame
 import random
 import os
-import time
 import neat
 import pickle
 
@@ -57,46 +56,46 @@ class Player:
     # check left side of the player
     def checkLeft(self, obstacle):
         if obstacle.x >= self.x - self.IMG.get_width() and obstacle.x <= self.x:
-            return 1
+            return 0
         if obstacle.x + obstacle.IMG.get_width() >= self.x - self.IMG.get_width() and obstacle.x + obstacle.IMG.get_width() <= self.x:
-            return 1
+            return 0
         if self.x - self.IMG.get_width() <= ROAD_LEFTWALL:
-            return 1
-        return 0
+            return 0
+        return 1
 
     # check right side of the player
     def checkRight(self, obstacle):
         if obstacle.x >= self.x + self.IMG.get_width() and obstacle.x <= self.x + self.IMG.get_width() * 2:
-            return 1
+            return 0
         if obstacle.x + obstacle.IMG.get_width() >= self.x + self.IMG.get_width() and obstacle.x + obstacle.IMG.get_width() <= self.x + self.IMG.get_width() * 2:
-            return 1
+            return 0
         if self.x + self.IMG.get_width() >= ROAD_RIGHTWALL:
-            return 1
-        return 0
+            return 0
+        return 1
 
     # check above of the player
     def checkMiddle(self, obstacle):
         if obstacle.x > self.x  and obstacle.x < self.x + self.IMG.get_width():
-            return 1
+            return 0
         if obstacle.x + obstacle.IMG.get_width() > self.x  and obstacle.x + obstacle.IMG.get_width() < self.x + self.IMG.get_width():
-            return 1
-        return 0
+            return 0
+        return 1
 
     # check far left side of the player
     def checkFarLeft(self, obstacle):
         if obstacle.x > self.x - 2 * self.IMG.get_width() and obstacle.x < self.x - self.IMG.get_width():
-            return 1
+            return 0
         if self.x - 2 * self.IMG.get_width() <= ROAD_LEFTWALL:
-            return 1
-        return 0
+            return 0
+        return 1
 
     # check far right side of the player
     def checkFarRight(self, obstacle):
         if obstacle.x > self.x + 2 * self.IMG.get_width() and obstacle.x < self.x + 3 * self.IMG.get_width():
-            return 1
+            return 0
         if self.x + 2 * self.IMG.get_width() >= ROAD_RIGHTWALL:
-            return 1
-        return 0
+            return 0
+        return 1
 
 class Obstacle:
     IMG = OBSTACLE_IMG
@@ -215,7 +214,7 @@ def main(genomes, config):
             for x, player in enumerate(players):
                 # check if collide
                 if obstacle.collide(player, WINDOW):
-                    ge[x].fitness -= 1
+                    ge[x].fitness -= 5
                     # remove collided player
                     nets.pop(players.index(player))
                     ge.pop(players.index(player))
@@ -237,7 +236,7 @@ def main(genomes, config):
             score += 1
             # increase fitness for players that make through each obstacle
             for g in ge:
-                g.fitness += 5
+                g.fitness += 7
             obstacles.append(Obstacle()) # generate a new obstacle
 
         # remove an out of screen obstacle from the set
@@ -249,29 +248,29 @@ def main(genomes, config):
             ge[x].fitness += 0.01
             for obstacle in obstacles:
                 around_environment = player.checkAround(obstacle) # get data about area around player
-            output = nets[x].activate((
-                                        player.x,
-                                        around_environment[0],
-                                        around_environment[1],
-                                        around_environment[2],
-                                        around_environment[3],
-                                        around_environment[4],
-                                       ))
-            if output[0] > 0.5:
-                player.moveLeft()
-            if output[2] > 0.5:
-                player.moveRight()
+                output = nets[x].activate((
+                                            player.x,
+                                            around_environment[0],
+                                            around_environment[1],
+                                            around_environment[2],
+                                            around_environment[3],
+                                            around_environment[4],
+                ))
+                if output[0] > 0.5:
+                    player.moveLeft()
+                if output[2] > 0.5:
+                    player.moveRight()
 
             # discourage NEAT to have player stay at the side of the screen
-            if player.x <= 145 or player.x + player.IMG.get_width() >= WIN_WIDTH - 85:
-                ge[x].fitness -= 1
+            if player.x <= 160 or player.x + player.IMG.get_width() >= WIN_WIDTH - 100:
+                ge[x].fitness -= 0.01
 
-            if player.x >= 250 and player.x <= 300:
+            if player.x >= 200 and player.x <= 300:
                 ge[x].fitness += 0.02
 
             # remove a player if they are out of the map
             if player.x <= 140 or player.x + player.IMG.get_width() >= WIN_WIDTH - 80:
-                ge[x].fitness -= 3
+                ge[x].fitness -= 5
                 nets.pop(players.index(player))
                 ge.pop(players.index(player))
                 players.pop(players.index(player))
