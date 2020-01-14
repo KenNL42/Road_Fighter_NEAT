@@ -8,3 +8,6 @@ The project is inspired by classic NES game Road Fighter. This project uses NEAT
 <li>Pygame</li>
 <li>Matplotlib</li>
 <li>pickle</li>
+
+# Result
+![RoadFighter_scoresheet](RoadFighter_scoresheet.jpg)
