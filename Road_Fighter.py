@@ -4,6 +4,7 @@ import random
 import os
 import neat
 import pickle
+import matplotlib.pyplot as plt
 
 pygame.font.init()
 
@@ -21,6 +22,9 @@ BG_IMG = pygame.transform.scale(pygame.image.load(os.path.join("imgs", "Road_Bac
 OBSTACLE_IMG = pygame.transform.scale(pygame.image.load(os.path.join("imgs", "car.png")), (IMG_WIDTH,IMG_HEIGHT))
 STAT_FONT = pygame.font.SysFont("comicsans", 50)
 GENERATION = 0
+x_data = []
+y_data = []
+
 
 class Player:
     IMG = PLAYER_IMG
@@ -56,46 +60,46 @@ class Player:
     # check left side of the player
     def checkLeft(self, obstacle):
         if obstacle.x >= self.x - self.IMG.get_width() and obstacle.x <= self.x:
-            return 0
+            return 1
         if obstacle.x + obstacle.IMG.get_width() >= self.x - self.IMG.get_width() and obstacle.x + obstacle.IMG.get_width() <= self.x:
-            return 0
+            return 1
         if self.x - self.IMG.get_width() <= ROAD_LEFTWALL:
-            return 0
-        return 1
+            return 1
+        return 0
 
     # check right side of the player
     def checkRight(self, obstacle):
         if obstacle.x >= self.x + self.IMG.get_width() and obstacle.x <= self.x + self.IMG.get_width() * 2:
-            return 0
+            return 1
         if obstacle.x + obstacle.IMG.get_width() >= self.x + self.IMG.get_width() and obstacle.x + obstacle.IMG.get_width() <= self.x + self.IMG.get_width() * 2:
-            return 0
+            return 1
         if self.x + self.IMG.get_width() >= ROAD_RIGHTWALL:
-            return 0
-        return 1
+            return 1
+        return 0
 
     # check above of the player
     def checkMiddle(self, obstacle):
         if obstacle.x > self.x  and obstacle.x < self.x + self.IMG.get_width():
-            return 0
+            return 1
         if obstacle.x + obstacle.IMG.get_width() > self.x  and obstacle.x + obstacle.IMG.get_width() < self.x + self.IMG.get_width():
-            return 0
-        return 1
+            return 1
+        return 0
 
     # check far left side of the player
     def checkFarLeft(self, obstacle):
         if obstacle.x > self.x - 2 * self.IMG.get_width() and obstacle.x < self.x - self.IMG.get_width():
-            return 0
+            return 1
         if self.x - 2 * self.IMG.get_width() <= ROAD_LEFTWALL:
-            return 0
-        return 1
+            return 1
+        return 0
 
     # check far right side of the player
     def checkFarRight(self, obstacle):
         if obstacle.x > self.x + 2 * self.IMG.get_width() and obstacle.x < self.x + 3 * self.IMG.get_width():
-            return 0
+            return 1
         if self.x + 2 * self.IMG.get_width() >= ROAD_RIGHTWALL:
-            return 0
-        return 1
+            return 1
+        return 0
 
 class Obstacle:
     IMG = OBSTACLE_IMG
@@ -191,11 +195,18 @@ def main(genomes, config):
     clock = pygame.time.Clock()
 
     run = True
+
+
+
     while run:
         clock.tick(60)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                plt.bar(x_data, y_data, align='center')
+                plt.xlabel('generation')
+                plt.ylabel('score')
+                plt.show()
                 run = False
                 pygame.quit()
                 quit()
@@ -236,7 +247,7 @@ def main(genomes, config):
             score += 1
             # increase fitness for players that make through each obstacle
             for g in ge:
-                g.fitness += 7
+                g.fitness += 5
             obstacles.append(Obstacle()) # generate a new obstacle
 
         # remove an out of screen obstacle from the set
@@ -245,7 +256,7 @@ def main(genomes, config):
 
         # call NEAT to find the best way to survive
         for x, player in enumerate(players):
-            ge[x].fitness += 0.01
+            ge[x].fitness += 0.05
             for obstacle in obstacles:
                 around_environment = player.checkAround(obstacle) # get data about area around player
                 output = nets[x].activate((
@@ -256,6 +267,7 @@ def main(genomes, config):
                                             around_environment[3],
                                             around_environment[4],
                 ))
+                #print(around_environment)
                 if output[0] > 0.5:
                     player.moveLeft()
                 if output[2] > 0.5:
@@ -263,14 +275,14 @@ def main(genomes, config):
 
             # discourage NEAT to have player stay at the side of the screen
             if player.x <= 160 or player.x + player.IMG.get_width() >= WIN_WIDTH - 100:
-                ge[x].fitness -= 0.01
+                ge[x].fitness -= 0.1
 
-            if player.x >= 200 and player.x <= 300:
-                ge[x].fitness += 0.02
+            if player.x >= 250 and player.x <= 300:
+                ge[x].fitness += 0.1
 
             # remove a player if they are out of the map
             if player.x <= 140 or player.x + player.IMG.get_width() >= WIN_WIDTH - 80:
-                ge[x].fitness -= 5
+                ge[x].fitness -= 10
                 nets.pop(players.index(player))
                 ge.pop(players.index(player))
                 players.pop(players.index(player))
@@ -285,6 +297,11 @@ def main(genomes, config):
             raise SystemExit()
             break
 
+
+
+        x_data.append(GENERATION)
+        y_data.append(score)
+
 def run(config_path):
     config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
                                 neat.DefaultSpeciesSet, neat.DefaultStagnation,
@@ -296,6 +313,7 @@ def run(config_path):
     population.add_reporter(stats)
 
     winner = population.run(main, 100)
+
 
 if __name__ == '__main__':
     local_dir = os.path.dirname(__file__)
