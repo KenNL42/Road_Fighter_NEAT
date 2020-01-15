@@ -1,6 +1,6 @@
 # Road_Fighter_NEAT
 
-The project is inspired by classic NES game Road Fighter. This project uses NEAT python to let the player evades obstacles
+The project is inspired by classic NES game Road Fighter. This project uses NEAT python to let AI evades obstacles
 
 # Modules List
 
