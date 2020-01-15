@@ -9,5 +9,8 @@ The project is inspired by classic NES game Road Fighter. This project uses NEAT
 <li>Matplotlib</li>
 <li>pickle</li>
 
+# Video Demo
+<a href="https://www.youtube.com/watch?v=RaR94BXEmgY" target="_blank">https://www.youtube.com/watch?v=RaR94BXEmgY</a>
+
 # Result
 ![RoadFighter_scoresheet](RoadFighter_scoresheet.jpg)
